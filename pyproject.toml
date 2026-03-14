@@ -1,0 +1,17 @@
+[project]
+name = "jupyter-notebook-mcp"
+version = "0.1.0"
+description = "MCP server for reading and editing Jupyter notebooks. File-based — no running Jupyter server required."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+jupyter-notebook-mcp = "server:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

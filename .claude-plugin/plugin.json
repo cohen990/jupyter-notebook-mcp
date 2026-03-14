@@ -1,0 +1,12 @@
+{
+  "name": "jupyter-notebook-mcp",
+  "description": "Read and edit Jupyter notebooks without chewing through context. List cells, read/edit individual cells, search across sources — all without ingesting raw .ipynb JSON.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samantha Cohen"
+  },
+  "homepage": "https://github.com/cohen990/jupyter-notebook-mcp",
+  "repository": "https://github.com/cohen990/jupyter-notebook-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "jupyter", "notebook", "ipynb"]
+}
