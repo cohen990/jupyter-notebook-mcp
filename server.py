@@ -67,6 +67,63 @@ def _find_cell(nb: dict, cell_id: str) -> tuple[int, dict]:
 
 
 @mcp.tool()
+def notebook_create(path: str, cells: list[dict]) -> str:
+    """Create a new notebook from a list of cell definitions.
+
+    Each cell dict should have:
+        - source: The cell content (code or markdown)
+        - cell_type: "code" or "markdown" (default: "code")
+        - id: Optional cell ID
+
+    Args:
+        path: Path for the new .ipynb file
+        cells: List of cell dicts with 'source' and optional 'cell_type'/'id'
+    """
+    p = Path(path).expanduser().resolve()
+    if p.exists():
+        raise FileExistsError(f"Notebook already exists: {p}")
+    if p.suffix != ".ipynb":
+        raise ValueError(f"Path must end in .ipynb: {p}")
+
+    nb_cells = []
+    for i, cell_def in enumerate(cells):
+        source = cell_def.get("source", "")
+        cell_type = cell_def.get("cell_type", "code")
+        cell_id = cell_def.get("id")
+
+        lines = source.split("\n")
+        cell = {
+            "cell_type": cell_type,
+            "source": [line + "\n" for line in lines[:-1]] + [lines[-1]],
+            "metadata": {},
+        }
+        if cell_id:
+            cell["id"] = cell_id
+        if cell_type == "code":
+            cell["outputs"] = []
+            cell["execution_count"] = None
+
+        nb_cells.append(cell)
+
+    nb = {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {"name": "python"},
+        },
+        "cells": nb_cells,
+    }
+
+    _save_notebook(path, nb)
+    return f"Created notebook {p} with {len(nb_cells)} cells"
+
+
+@mcp.tool()
 def notebook_list_cells(path: str) -> str:
     """List all cells in a notebook with their index, ID, type, and first line.
 
