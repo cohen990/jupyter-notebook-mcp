@@ -5,6 +5,7 @@ File-based — no running Jupyter server required. Operates directly on the
 stays focused on code and markdown.
 """
 
+import hashlib
 import json
 import re
 import sys
@@ -45,6 +46,11 @@ def _cell_source(cell: dict) -> str:
 def _cell_id(cell: dict, index: int) -> str:
     """Get cell ID, falling back to index."""
     return cell.get("id", str(index))
+
+
+def _source_hash(source: str) -> str:
+    """Short hash of cell source for edit verification."""
+    return hashlib.sha256(source.encode()).hexdigest()[:12]
 
 
 def _find_cell(nb: dict, cell_id: str) -> tuple[int, dict]:
@@ -157,7 +163,8 @@ def notebook_read_cell(path: str, cell_id: str) -> str:
     ctype = cell.get("cell_type", "unknown")
     cid = _cell_id(cell, idx)
     src = _cell_source(cell)
-    return f"Cell [{idx}] ({ctype}) id={cid}\n\n{src}"
+    h = _source_hash(src)
+    return f"Cell [{idx}] ({ctype}) id={cid} hash={h}\n\n{src}"
 
 
 @mcp.tool()
@@ -205,18 +212,31 @@ def notebook_read_cell_output(path: str, cell_id: str) -> str:
 
 @mcp.tool()
 def notebook_edit_cell(
-    path: str, cell_id: str, new_source: str, cell_type: str | None = None
+    path: str, cell_id: str, new_source: str, source_hash: str,
+    cell_type: str | None = None,
 ) -> str:
     """Replace the source of a single cell.
+
+    Requires source_hash from a prior notebook_read_cell call. This ensures
+    you have read the cell before editing it and that it hasn't changed since.
 
     Args:
         path: Path to the .ipynb file
         cell_id: Cell ID or integer index
         new_source: The new cell source code/markdown
+        source_hash: Hash from notebook_read_cell (prevents blind edits)
         cell_type: Optionally change cell type ("code" or "markdown")
     """
     nb = _load_notebook(path)
     idx, cell = _find_cell(nb, cell_id)
+    old_source = _cell_source(cell)
+    expected_hash = _source_hash(old_source)
+
+    if source_hash != expected_hash:
+        raise ValueError(
+            f"Hash mismatch for cell [{idx}]: expected {expected_hash}, "
+            f"got {source_hash}. Read the cell first with notebook_read_cell."
+        )
 
     # Store source as list of lines (notebook convention)
     lines = new_source.split("\n")
@@ -231,7 +251,8 @@ def notebook_edit_cell(
         cell["execution_count"] = None
 
     _save_notebook(path, nb)
-    return f"Updated cell [{idx}] (id={_cell_id(cell, idx)})"
+    new_hash = _source_hash(new_source)
+    return f"Updated cell [{idx}] (id={_cell_id(cell, idx)}) hash={new_hash}"
 
 
 @mcp.tool()
